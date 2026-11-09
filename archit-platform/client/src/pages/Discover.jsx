@@ -1,0 +1,14 @@
+import { useEffect, useState } from 'react';
+import api from '../services/api';
+import { useAuth } from '../context/AuthContext';
+export default function Discover() {
+  const {user} = useAuth(); const [people,setPeople] = useState([]); const [q,setQ] = useState(''); const [selected,setSelected] = useState(null); const [form,setForm] = useState({title:'',description:'',budget:'',location:''});
+  const load=async()=>{const {data}=await api.get('/users',{params:{role:user?.role==='CLIENT'?'ARCHITECT':undefined,q}});setPeople(data.filter(p=>p.id!==user?.id));};
+  useEffect(()=>{load();},[]);
+  const search=async e=>{e.preventDefault();await load();};
+  const send=async e=>{e.preventDefault();try{await api.post(`/enquiries/${selected.id}`,form);alert('Enquiry sent');setSelected(null);setForm({title:'',description:'',budget:'',location:''});}catch(err){alert(err.response?.data?.message||'Could not send enquiry');}};
+  return <div className="space-y-5"><div><h1 className="text-2xl font-bold">{user?.role==='CLIENT'?'Discover architects':'Discover people'}</h1><p className="text-stone-500">Explore professionals and their work.</p></div><form onSubmit={search} className="flex gap-2"><input className="field" placeholder="Search by name, bio or location" value={q} onChange={e=>setQ(e.target.value)}/><button className="btn-primary">Search</button></form>
+    <div className="grid sm:grid-cols-2 gap-4">{people.map(p=><div key={p.id} className="card p-5"><div className="font-bold">{p.name}</div><p className="text-xs text-sage font-semibold mt-1">{p.role}</p><p className="text-sm text-stone-500 mt-2">{p.bio || 'No bio added yet.'}</p><p className="text-xs text-stone-400 mt-2">{p.location}</p>{user?.role==='CLIENT' && p.role==='ARCHITECT' && <button className="btn-primary mt-4" onClick={()=>setSelected(p)}>Contact architect</button>}</div>)}</div>
+    {selected && <div className="fixed inset-0 bg-black/40 z-30 grid place-items-center p-4"><form onSubmit={send} className="card p-6 w-full max-w-lg space-y-3"><div className="flex justify-between"><h2 className="font-bold text-lg">Contact {selected.name}</h2><button type="button" onClick={()=>setSelected(null)}>✕</button></div><input className="field" required placeholder="Project title" value={form.title} onChange={e=>setForm({...form,title:e.target.value})}/><textarea className="field min-h-28" required placeholder="Describe the work you need" value={form.description} onChange={e=>setForm({...form,description:e.target.value})}/><input className="field" placeholder="Budget (optional)" type="number" value={form.budget} onChange={e=>setForm({...form,budget:e.target.value})}/><input className="field" placeholder="Project location" value={form.location} onChange={e=>setForm({...form,location:e.target.value})}/><button className="btn-primary w-full">Send enquiry</button></form></div>}
+  </div>;
+}

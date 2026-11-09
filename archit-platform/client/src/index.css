@@ -1,0 +1,12 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root { font-family: Inter, ui-sans-serif, system-ui, sans-serif; color: #17211f; background: #f5f6f4; }
+body { margin: 0; }
+button, input, textarea, select { font: inherit; }
+.card { @apply bg-white border border-stone-200 rounded-2xl shadow-sm; }
+.btn { @apply inline-flex items-center justify-center rounded-xl px-4 py-2 font-medium transition; }
+.btn-primary { @apply btn bg-ink text-white hover:bg-slate-700 disabled:opacity-50; }
+.btn-secondary { @apply btn border border-stone-300 bg-white hover:bg-stone-50; }
+.field { @apply w-full rounded-xl border border-stone-300 bg-white px-3 py-2 outline-none focus:ring-2 focus:ring-sage; }
