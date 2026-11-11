@@ -90,7 +90,7 @@ export default function ClientArchitects({ savedOnly = false }) {
           {readableList(architect.specializations) && <p className="mt-2 line-clamp-1 text-xs font-medium text-sage">{readableList(architect.specializations)}</p>}
           <div className="mt-3 flex items-center gap-2 text-xs text-stone-500"><BriefcaseBusiness size={15}/>{architect.experience_years || 0} years experience · {architect.portfolio_count || 0} projects</div>
           {architect.portfolio_title && <p className="mt-2 truncate text-xs text-stone-500">Featured: {architect.portfolio_title}</p>}
-          <div className="mt-4 flex gap-2"><Link className="btn-secondary flex-1 text-sm" to={`/architects/${architect.id}`}>View profile</Link><Link className="btn-primary flex-1 text-sm" to={`/architects/${architect.id}?enquire=1`}>Send enquiry</Link></div>
+          <div className="mt-4 flex flex-wrap gap-2"><Link className="btn-secondary flex-1 text-sm" to={`/users/${architect.id}`}>View profile &amp; posts</Link><Link className="btn-secondary flex-1 text-sm" to={`/architects/${architect.id}`}>View portfolio</Link><Link className="btn-primary flex-1 text-sm" to={`/architects/${architect.id}?enquire=1`}>Send enquiry</Link></div>
         </div>
       </article>)}</div>}
     {!loading && !architects.length && <div className="card p-10 text-center text-stone-500">{savedOnly ? 'No saved architects yet. Discover professionals and bookmark profiles you like.' : 'No architects matched those filters. Try broadening your search.'}</div>}
@@ -115,7 +115,7 @@ export function ClientArchitectProfile() {
       <div className="p-6 sm:flex sm:items-end sm:gap-5">
         <img src={architect.profile_image || ''} alt="" className="-mt-16 h-28 w-28 rounded-2xl border-4 border-white bg-white object-cover"/>
         <div className="mt-3 flex-1"><p className="text-sm uppercase tracking-widest text-sage">{architect.firm_name || 'Architect'}</p><h1 className="text-3xl font-semibold">{architect.name}</h1><p className="mt-1 text-stone-500">{architect.location || 'Location not specified'} · {architect.experience_years || 0} years experience</p></div>
-        <div className="mt-4 flex items-center gap-2 sm:mt-0"><Link to={`/messages?shareType=PROFILE&shareId=${architect.id}`} className="rounded-lg p-2 text-stone-500 hover:bg-sand hover:text-sage" aria-label="Share profile in chat" title="Share profile in chat"><Share2 size={18}/></Link><button className="btn-primary" onClick={()=>setShowEnquiry(value=>!value)}>{showEnquiry ? 'Close enquiry' : 'Send project enquiry'}</button></div>
+        <div className="mt-4 flex items-center gap-2 sm:mt-0"><Link className="btn-secondary text-sm" to={`/users/${architect.id}`}>View profile &amp; posts</Link><Link to={`/messages?shareType=PROFILE&shareId=${architect.id}`} className="rounded-lg p-2 text-stone-500 hover:bg-sand hover:text-sage" aria-label="Share profile in chat" title="Share profile in chat"><Share2 size={18}/></Link><button className="btn-primary" onClick={()=>setShowEnquiry(value=>!value)}>{showEnquiry ? 'Close enquiry' : 'Send project enquiry'}</button></div>
       </div>
       <div className="grid gap-6 border-t p-6 md:grid-cols-[minmax(0,2fr)_minmax(220px,1fr)]">
         <div><h2 className="font-semibold">About</h2><p className="mt-2 whitespace-pre-wrap text-sm leading-7 text-stone-600">{architect.bio || 'This architect has not added a biography yet.'}</p></div>
