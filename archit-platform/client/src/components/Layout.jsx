@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { NavLink, Outlet, useNavigate } from 'react-router-dom';
+import { Link, NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { Bell, Home, Users, BriefcaseBusiness, MessageCircle, Compass, LogOut, UserRound, Bookmark, FolderOpen, FileText, BellRing, ClipboardList } from 'lucide-react';
 import { io } from 'socket.io-client';
 import { useAuth } from '../context/AuthContext';
@@ -62,7 +62,7 @@ export default function Layout() {
           <span className="hidden sm:block text-sm text-stone-500">{user?.name} · {user?.role?.toLowerCase()}</span>
           <div className="relative">
             <button className="relative p-2" onClick={()=>setShowNotifications(value=>!value)} aria-label="Notifications"><Bell size={20}/>{unread>0&&<span className="absolute -right-1 -top-1 rounded-full bg-red-600 px-1.5 text-[10px] text-white">{unread}</span>}</button>
-            {showNotifications&&<div className="absolute right-0 z-40 mt-2 w-80 rounded-xl border bg-white shadow-xl"><div className="flex items-center justify-between border-b p-3"><b>Notifications</b>{unread>0&&<button className="text-xs text-sage" onClick={markAll}>Mark all read</button>}</div><div className="max-h-96 overflow-y-auto">{notifications.map(notification=><div key={notification.id} className={`border-b p-3 text-sm ${notification.is_read?'':'bg-sand'}`}><b>{notification.title}</b><p className="text-xs text-stone-600">{notification.message}</p></div>)}{!notifications.length&&<p className="p-5 text-center text-sm text-stone-500">No notifications yet.</p>}</div></div>}
+            {showNotifications&&<div className="absolute right-0 z-40 mt-2 w-80 rounded-xl border bg-white shadow-xl"><div className="flex items-center justify-between border-b p-3"><b>Notifications</b>{unread>0&&<button className="text-xs text-sage" onClick={markAll}>Mark all read</button>}</div><div className="max-h-96 overflow-y-auto">{notifications.map(notification=>{const to=notification.notification_type==='ENQUIRY'&&notification.reference_id?`/enquiries/${notification.reference_id}`:null;const content=<><b>{notification.title}</b><p className="text-xs text-stone-600">{notification.message}</p></>;return to?<Link key={notification.id} to={to} onClick={()=>setShowNotifications(false)} className={`block border-b p-3 text-sm hover:bg-stone-50 ${notification.is_read?'':'bg-sand'}`}>{content}</Link>:<div key={notification.id} className={`border-b p-3 text-sm ${notification.is_read?'':'bg-sand'}`}>{content}</div>;})}{!notifications.length&&<p className="p-5 text-center text-sm text-stone-500">No notifications yet.</p>}</div><Link to="/notifications" onClick={()=>setShowNotifications(false)} className="block border-t p-3 text-center text-xs font-semibold text-sage">View all notifications</Link></div>}
           </div>
           <button className="btn-secondary text-sm" onClick={() => { logout(); navigate('/login'); }}><LogOut size={16}/> <span className="ml-2">Sign out</span></button>
         </div>

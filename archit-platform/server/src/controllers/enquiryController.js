@@ -49,6 +49,7 @@ exports.create = async (req, res) => {
     [architectId]
   );
   if (!architect.length) return res.status(404).json({ message: 'Architect not found' });
+  const [clients] = await db.execute('SELECT name FROM users WHERE id=?', [req.user.id]);
   const [duplicates] = await db.execute(
     `SELECT id FROM project_inquiries
      WHERE client_id=? AND architect_id=? AND LOWER(title)=LOWER(?)
@@ -92,7 +93,14 @@ exports.create = async (req, res) => {
     }
 
     await conn.commit();
-    await notify(architectId, 'New client enquiry', 'A client sent you a project enquiry.', 'ENQUIRY', inq.insertId);
+    const details = [
+      category,
+      location?.trim(),
+      min !== null || max !== null ? `Budget: ${min ?? '—'}–${max ?? '—'}` : null
+    ].filter(Boolean);
+    const summary = description.trim().slice(0, 240);
+    const notificationMessage = `${clients[0]?.name || 'A client'} sent "${title.trim()}"${details.length ? ` (${details.join(' · ')})` : ''}. ${summary}${description.trim().length > 240 ? '…' : ''}`;
+    await notify(architectId, 'New client enquiry', notificationMessage, 'ENQUIRY', inq.insertId);
     res.status(201).json({ id: inq.insertId, conversationId: conv.insertId, message: 'Enquiry sent' });
   } catch (error) {
     await conn.rollback();
