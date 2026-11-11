@@ -50,6 +50,19 @@ exports.create = async (req, res) => {
   );
   if (!architect.length) return res.status(404).json({ message: 'Architect not found' });
   const [clients] = await db.execute('SELECT name FROM users WHERE id=?', [req.user.id]);
+  const enquiryMessage = [
+    `Project enquiry: ${title.trim()}`,
+    category ? `Category: ${category}` : null,
+    location?.trim() ? `Location: ${location.trim()}` : null,
+    land_area?.trim() ? `Land area: ${land_area.trim()}` : null,
+    min !== null || max !== null ? `Budget: ${min ?? '—'} – ${max ?? '—'}` : legacyBudget !== null ? `Budget: ${legacyBudget}` : null,
+    expected_timeline?.trim() ? `Expected timeline: ${expected_timeline.trim()}` : null,
+    preferred_style?.trim() ? `Preferred style: ${preferred_style.trim()}` : null,
+    '',
+    'Project brief:',
+    description.trim(),
+    req.files?.length ? `\n${req.files.length} reference file(s) are attached to this enquiry.` : null
+  ].filter(line => line !== null).join('\n');
   const [duplicates] = await db.execute(
     `SELECT id FROM project_inquiries
      WHERE client_id=? AND architect_id=? AND LOWER(title)=LOWER(?)
@@ -82,6 +95,10 @@ exports.create = async (req, res) => {
       [conv.insertId, req.user.id, conv.insertId, architectId]
     );
     await conn.execute('UPDATE project_inquiries SET conversation_id=? WHERE id=?', [conv.insertId, inq.insertId]);
+    await conn.execute(
+      'INSERT INTO messages (conversation_id,sender_id,message) VALUES (?,?,?)',
+      [conv.insertId, req.user.id, enquiryMessage]
+    );
 
     for (const file of req.files || []) {
       const fileUrl = await upload(file, `enquiries/${inq.insertId}`);
