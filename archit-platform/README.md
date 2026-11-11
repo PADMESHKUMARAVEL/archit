@@ -35,6 +35,7 @@ mysql -u root -p < database/migrations/006_chat_profile_post_shares.sql
 mysql -u root -p < database/migrations/007_client_fields_on_users.sql
 mysql -u root -p < database/migrations/008_drop_client_profiles.sql
 mysql -u root -p < database/migrations/009_repair_project_inquiry_fields.sql
+mysql -u root -p < database/migrations/010_repair_client_workspace_tables.sql
 cp .env.example .env
 cd server && npm install && npm run seed
 ```
@@ -84,10 +85,12 @@ deployment root directories accordingly.
    `009_repair_project_inquiry_fields.sql` to the same Aiven database configured
    for Render. It safely adds any missing enquiry-detail columns, including
    `project_inquiries.category`. On a fresh database, run all migrations through
-   009 in order.
+   010 in order. Migration 010 safely recreates missing client-workspace tables
+   and ensures enquiry status values are supported; use it instead of rerunning
+   migration 004 if the legacy `client_profiles` table has already been dropped.
    Do not rerun already-applied migrations (in particular, migration `002`
    and migrations `004` and `007` add columns and are not repeatable; migration
-   `009` is safe to rerun). The migrations use the
+   `009` and `010` are safe to rerun). The migrations use the
    `archit_platform` database; set `DB_NAME`
    to `archit_platform` in Render.
 4. Keep the Aiven host, port, user, and newly rotated password in Render only.
@@ -232,7 +235,7 @@ Socket.IO events:
 
 ## Notes
 - Client documents, enquiry attachments, and public-brief references use the
-  configured private S3-compatible object storage. Apply all nine database
+  configured private S3-compatible object storage. Apply all ten database
   migrations before using the latest chat and client marketplace functionality.
 - Chat messages are persisted in MySQL; Socket.IO only handles real-time delivery.
 - `POST /api/chat/:conversationId/messages` also accepts `shareType=PROFILE|POST`

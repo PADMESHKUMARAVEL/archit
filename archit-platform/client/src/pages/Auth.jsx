@@ -8,7 +8,6 @@ export function Login() {
   const submit = async e => { e.preventDefault(); setError(''); try { await login(email.trim().toLowerCase(),password); nav('/'); } catch(err) { setError(err.response?.data?.message || 'Unable to sign in'); } };
   return <AuthShell title="Welcome back" subtitle="Sign in to your architecture network.">
     <form onSubmit={submit} className="space-y-3"><input className="field" type="email" required autoComplete="email" placeholder="Email address" value={email} onChange={e=>setEmail(e.target.value)}/><input className="field" type="password" required autoComplete="current-password" placeholder="Password" value={password} onChange={e=>setPassword(e.target.value)}/>{error && <p className="text-sm text-red-600">{error}</p>}<button className="btn-primary w-full">Sign in</button></form>
-    <div className="mt-5 rounded-lg bg-stone-100 p-3 text-xs text-stone-600"><b>Student test account</b><br/>student1@archit.test<br/>Student@123</div>
     <p className="text-sm text-center mt-5 text-stone-500">New to Archit? <Link className="text-sage font-semibold" to="/register">Create an account</Link></p>
   </AuthShell>;
 }
