@@ -19,15 +19,31 @@ exports.getOne = async (req, res) => {
   const [rows] = await db.execute(
     `SELECT u.id,u.name,u.role,u.profile_image,u.bio,u.location,
        sp.college,sp.degree,sp.specialization,sp.graduation_year,sp.skills,
-       ap.firm_name,ap.experience_years,ap.specializations,ap.website
+       ap.firm_name,ap.experience_years,ap.specializations,ap.website,
+       EXISTS(
+         SELECT 1 FROM connections c
+         WHERE c.status='ACCEPTED'
+           AND ((c.requester_id=u.id AND c.receiver_id=?) OR (c.receiver_id=u.id AND c.requester_id=?))
+       ) is_connection
      FROM users u
      LEFT JOIN student_profiles sp ON sp.user_id=u.id
      LEFT JOIN architect_profiles ap ON ap.user_id=u.id
      WHERE u.id=? AND u.is_active=1`,
-    [req.params.id]
+    [req.user.id,req.user.id,req.params.id]
   );
   if (!rows.length) return res.status(404).json({ message: 'Profile not found' });
-  res.json(await signAssetUrls(rows[0]));
+  const profile = rows[0];
+  const isConnection = Boolean(profile.is_connection);
+  profile.is_connection = isConnection;
+  if (!isConnection) {
+    for (const field of [
+      'college','degree','specialization','graduation_year','skills',
+      'firm_name','experience_years','specializations','website'
+    ]) {
+      delete profile[field];
+    }
+  }
+  res.json(await signAssetUrls(profile));
 };
 
 exports.updateMe = async (req, res) => {

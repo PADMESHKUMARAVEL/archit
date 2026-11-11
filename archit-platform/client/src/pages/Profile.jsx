@@ -1,4 +1,6 @@
 import { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
+import { Share2 } from 'lucide-react';
 import api from '../services/api';
 import { useAuth } from '../context/AuthContext';
 export default function Profile() {
@@ -13,7 +15,7 @@ export default function Profile() {
     setForm(current=>({...current,profile_image:response.data.profile_image}));
     setSaved(true);
   };
-  return <div className="card p-6 max-w-2xl"><h1 className="text-2xl font-bold">Your profile</h1><p className="text-sm text-stone-500 mb-5">{user?.role}</p><form onSubmit={submit} className="space-y-4">
+  return <div className="card p-6 max-w-2xl"><div className="flex items-start justify-between"><div><h1 className="text-2xl font-bold">Your profile</h1><p className="text-sm text-stone-500 mb-5">{user?.role}</p></div><Link to={`/messages?shareType=PROFILE&shareId=${user?.id}`} className="rounded-lg p-2 text-stone-500 hover:bg-sand hover:text-sage" aria-label="Share profile in chat" title="Share profile in chat"><Share2 size={18}/></Link></div><form onSubmit={submit} className="space-y-4">
     <div className="flex items-center gap-4">
       {form.profile_image ? <img src={form.profile_image} alt="Profile" className="h-24 w-24 rounded-full object-cover"/> : <div className="h-24 w-24 rounded-full bg-sand flex items-center justify-center text-3xl">{form.name?.[0] || '?'}</div>}
       <div><label className="btn-primary cursor-pointer inline-block">Upload photo<input type="file" accept="image/jpeg,image/png,image/webp,image/gif" className="hidden" onChange={uploadPhoto}/></label><p className="text-xs text-stone-500 mt-2">JPG, PNG, WEBP or GIF, up to 5 MB</p></div>

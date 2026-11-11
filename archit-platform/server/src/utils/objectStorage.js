@@ -10,6 +10,7 @@ const ASSET_FIELDS = new Set([
   'other_party_image',
   'media_url',
   'attachment_url',
+  'file_url',
   'resume_url',
   'cover_image'
 ]);
@@ -18,9 +19,21 @@ let client;
 
 function getClient() {
   if (!client) {
+    const endpoint = required('STORAGE_ENDPOINT');
+    let parsedEndpoint;
+    try {
+      parsedEndpoint = new URL(endpoint);
+    } catch {
+      throw new Error('STORAGE_ENDPOINT must be a valid Supabase Storage S3 URL');
+    }
+    if (parsedEndpoint.protocol !== 'https:' ||
+        !parsedEndpoint.hostname.endsWith('.supabase.co') ||
+        parsedEndpoint.pathname.replace(/\/+$/, '') !== '/storage/v1/s3') {
+      throw new Error('STORAGE_ENDPOINT must use https://<project>.supabase.co/storage/v1/s3');
+    }
     client = new S3Client({
       region: required('STORAGE_REGION'),
-      endpoint: required('STORAGE_ENDPOINT'),
+      endpoint,
       forcePathStyle: true,
       credentials: {
         accessKeyId: required('STORAGE_ACCESS_KEY_ID'),
@@ -52,10 +65,14 @@ async function upload(file, folder) {
 }
 
 async function signUrl(value) {
-  if (typeof value !== 'string' || !value.startsWith('object://')) return value;
+  if (typeof value !== 'string') return value;
+  if (/localhost|127\.0\.0\.1|\/uploads\//i.test(value)) {
+    throw new Error('Legacy local upload reference must be migrated to Supabase Storage');
+  }
+  if (!value.startsWith('object://')) return value;
   const key = value.slice('object://'.length);
   if (!key || key.includes('..') || key.startsWith('/')) {
-    throw new Error('Invalid R2 asset key');
+    throw new Error('Invalid Supabase Storage object key');
   }
   const expiresIn = Number(process.env.STORAGE_URL_TTL_SECONDS || 3600);
   if (!Number.isInteger(expiresIn) || expiresIn < 60 || expiresIn > 604800) {

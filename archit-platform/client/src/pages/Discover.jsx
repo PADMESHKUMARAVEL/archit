@@ -1,14 +1,42 @@
 import { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import api from '../services/api';
 import { useAuth } from '../context/AuthContext';
 export default function Discover() {
-  const {user} = useAuth(); const [people,setPeople] = useState([]); const [q,setQ] = useState(''); const [selected,setSelected] = useState(null); const [form,setForm] = useState({title:'',description:'',budget:'',location:''});
-  const load=async()=>{const {data}=await api.get('/users',{params:{role:user?.role==='CLIENT'?'ARCHITECT':undefined,q}});setPeople(data.filter(p=>p.id!==user?.id));};
-  useEffect(()=>{load();},[]);
-  const search=async e=>{e.preventDefault();await load();};
-  const send=async e=>{e.preventDefault();try{await api.post(`/enquiries/${selected.id}`,form);alert('Enquiry sent');setSelected(null);setForm({title:'',description:'',budget:'',location:''});}catch(err){alert(err.response?.data?.message||'Could not send enquiry');}};
-  return <div className="space-y-5"><div><h1 className="text-2xl font-bold">{user?.role==='CLIENT'?'Discover architects':'Discover people'}</h1><p className="text-stone-500">Explore professionals and their work.</p></div><form onSubmit={search} className="flex gap-2"><input className="field" placeholder="Search by name, bio or location" value={q} onChange={e=>setQ(e.target.value)}/><button className="btn-primary">Search</button></form>
-    <div className="grid sm:grid-cols-2 gap-4">{people.map(p=><div key={p.id} className="card p-5"><div className="font-bold">{p.name}</div><p className="text-xs text-sage font-semibold mt-1">{p.role}</p><p className="text-sm text-stone-500 mt-2">{p.bio || 'No bio added yet.'}</p><p className="text-xs text-stone-400 mt-2">{p.location}</p>{user?.role==='CLIENT' && p.role==='ARCHITECT' && <button className="btn-primary mt-4" onClick={()=>setSelected(p)}>Contact architect</button>}</div>)}</div>
-    {selected && <div className="fixed inset-0 bg-black/40 z-30 grid place-items-center p-4"><form onSubmit={send} className="card p-6 w-full max-w-lg space-y-3"><div className="flex justify-between"><h2 className="font-bold text-lg">Contact {selected.name}</h2><button type="button" onClick={()=>setSelected(null)}>✕</button></div><input className="field" required placeholder="Project title" value={form.title} onChange={e=>setForm({...form,title:e.target.value})}/><textarea className="field min-h-28" required placeholder="Describe the work you need" value={form.description} onChange={e=>setForm({...form,description:e.target.value})}/><input className="field" placeholder="Budget (optional)" type="number" value={form.budget} onChange={e=>setForm({...form,budget:e.target.value})}/><input className="field" placeholder="Project location" value={form.location} onChange={e=>setForm({...form,location:e.target.value})}/><button className="btn-primary w-full">Send enquiry</button></form></div>}
+  const {user} = useAuth();
+  const [people,setPeople] = useState([]);
+  const [q,setQ] = useState('');
+  const [error,setError] = useState('');
+  const targetRole = user?.role === 'ARCHITECT' ? 'CLIENT' : undefined;
+  const load=async()=>{
+    setError('');
+    try {
+      const {data}=await api.get('/users',{params:{role:targetRole,q}});
+      const candidates=data.filter(person=>person.id!==user?.id);
+      if(user?.role==='ARCHITECT') {
+        const states=await Promise.all(candidates.map(person=>api.get(`/network/status/${person.id}`)));
+        setPeople(candidates.map((person,index)=>({...person,connection:states[index].data})));
+      } else setPeople(candidates);
+    } catch (requestError) {
+      setError(requestError.response?.data?.message||'Could not load people');
+    }
+  };
+  useEffect(()=>{load();},[user?.id,user?.role]);
+  const search=async event=>{event.preventDefault();await load();};
+  const connect=async person=>{
+    setError('');
+    try {
+      await api.post(`/network/request/${person.id}`);
+      setPeople(current=>current.map(item=>item.id===person.id?{...item,connection:{status:'PENDING',requester_id:user.id}}:item));
+    } catch(requestError) {
+      setError(requestError.response?.data?.message||'Could not contact this client');
+    }
+  };
+  return <div className="space-y-5">
+    <div><h1 className="text-2xl font-bold">{user?.role==='ARCHITECT'?'Discover clients':'Discover people'}</h1><p className="text-stone-500">{user?.role==='ARCHITECT'?'Find clients, view their profiles, and request a connection to discuss working together.':'Explore professionals and their work.'}</p></div>
+    <form onSubmit={search} className="flex gap-2"><input className="field" placeholder="Search by name, bio or location" value={q} onChange={event=>setQ(event.target.value)}/><button className="btn-primary">Search</button></form>
+    {error&&<p role="alert" className="text-sm text-red-700">{error}</p>}
+    <div className="grid gap-4 sm:grid-cols-2">{people.map(person=><div key={person.id} className="card p-5"><div className="flex items-center gap-3"><img src={person.profile_image||''} alt="" className="h-12 w-12 rounded-full bg-stone-100 object-cover"/><div><div className="font-bold">{person.name}</div><p className="mt-1 text-xs font-semibold text-sage">{person.role}</p></div></div><p className="mt-3 text-sm text-stone-500">{person.bio||'No bio added yet.'}</p><p className="mt-2 text-xs text-stone-400">{person.location||'Location not specified'}</p><div className="mt-4 flex flex-wrap gap-2"><Link className="btn-secondary text-sm" to={`/users/${person.id}`}>View profile</Link>{user?.role==='ARCHITECT'&&person.role==='CLIENT'&&(person.connection?.status==='ACCEPTED'?<span className="self-center text-xs text-stone-500">Connected</span>:person.connection?.status==='PENDING'?<span className="self-center text-xs text-stone-500">{Number(person.connection.requester_id)===Number(user.id)?'Request sent':'Request received'}</span>:<button className="btn-primary text-sm" onClick={()=>connect(person)}>Connect with client</button>)}</div></div>)}</div>
+    {!people.length&&<div className="card p-8 text-center text-sm text-stone-500">No profiles found. Try a broader search.</div>}
   </div>;
 }

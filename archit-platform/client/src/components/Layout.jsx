@@ -1,11 +1,11 @@
 import { useEffect, useState } from 'react';
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
-import { Bell, Home, Users, BriefcaseBusiness, MessageCircle, Compass, LogOut, UserRound } from 'lucide-react';
+import { Bell, Home, Users, BriefcaseBusiness, MessageCircle, Compass, LogOut, UserRound, Bookmark, FolderOpen, FileText, BellRing, ClipboardList } from 'lucide-react';
 import { io } from 'socket.io-client';
 import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
 
-const links = [
+const defaultLinks = [
   ['/', 'Feed', Home],
   ['/network', 'My network', Users],
   ['/jobs', 'Jobs', BriefcaseBusiness],
@@ -25,6 +25,34 @@ export default function Layout() {
     return ()=>socket.disconnect();
   },[]);
   const unread=notifications.filter(notification=>!notification.is_read).length;
+  const links = user?.role === 'CLIENT' ? [
+    ['/', 'Overview', Home],
+    ['/discover', 'Discover architects', Compass],
+    ['/saved', 'Saved architects', Bookmark],
+    ['/project-requests', 'Post a project brief', ClipboardList],
+    ['/enquiries', 'My enquiries', BriefcaseBusiness],
+    ['/projects', 'My projects', FolderOpen],
+    ['/messages', 'Messages', MessageCircle],
+    ['/notifications', 'Notifications', BellRing],
+    ['/documents', 'My documents', FileText],
+    ['/profile', 'Settings', UserRound]
+  ] : user?.role === 'ARCHITECT' ? [
+    [ '/', 'Work feed', Home ],
+    ['/network', 'My network', Users],
+    ['/jobs', 'Jobs & internships', BriefcaseBusiness],
+    ['/discover', 'Find clients', Compass],
+    ['/project-board', 'Client project briefs', ClipboardList],
+    ['/enquiries', 'Client enquiries', BriefcaseBusiness],
+    ['/projects', 'Projects', FolderOpen],
+    ...defaultLinks.slice(4)
+  ] : user?.role === 'STUDENT' ? [
+    ['/', 'Achievements & work', Home],
+    ['/network', 'My network', Users],
+    ['/jobs', 'Jobs & internships', BriefcaseBusiness],
+    ['/discover', 'Discover people', Compass],
+    ['/messages', 'Messages', MessageCircle],
+    ['/profile', 'Profile', UserRound]
+  ] : defaultLinks;
   const markAll=async()=>{await api.patch('/notifications/read-all');setNotifications(current=>current.map(notification=>({...notification,is_read:true})));};
   return <div className="min-h-screen">
     <header className="sticky top-0 z-20 border-b bg-white/95 backdrop-blur">
@@ -43,7 +71,7 @@ export default function Layout() {
     <div className="max-w-7xl mx-auto px-4 py-6 grid grid-cols-1 md:grid-cols-[220px_minmax(0,1fr)] gap-6">
       <aside className="card p-3 h-fit">
         <nav className="flex md:flex-col gap-1 overflow-x-auto">
-          {links.map(([to,label,Icon]) => <NavLink key={to} to={to} className={({isActive}) => `flex items-center gap-3 rounded-xl px-3 py-3 text-sm whitespace-nowrap ${isActive ? 'bg-sand font-semibold' : 'text-stone-600 hover:bg-stone-50'}`}><Icon size={18}/>{label}</NavLink>)}
+          {links.map(([to,label,Icon]) => <NavLink key={to} to={to} end={to==='/'} className={({isActive}) => `flex items-center gap-3 rounded-xl px-3 py-3 text-sm whitespace-nowrap ${isActive ? 'bg-sand font-semibold' : 'text-stone-600 hover:bg-stone-50'}`}><Icon size={18}/>{label}</NavLink>)}
         </nav>
         <div className="hidden md:block mt-5 p-3 rounded-xl bg-sand text-xs text-stone-600">A professional network for the people who shape spaces.</div>
       </aside>

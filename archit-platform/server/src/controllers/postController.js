@@ -66,6 +66,25 @@ exports.byUser = async (req, res) => {
   res.json(await attachMedia(rows));
 };
 
+exports.getOne = async (req, res) => {
+  const postId = Number(req.params.id);
+  if (!Number.isSafeInteger(postId) || postId < 1) {
+    return res.status(400).json({ message: 'Invalid post' });
+  }
+  if (!await canViewPost(postId, req.user.id)) {
+    return res.status(404).json({ message: 'Post not found' });
+  }
+  const [rows] = await db.execute(
+    `SELECT p.id,p.user_id,p.content,p.visibility,p.created_at,u.name,u.role,u.profile_image,
+       (SELECT COUNT(*) FROM post_likes l WHERE l.post_id=p.id) likes_count,
+       EXISTS(SELECT 1 FROM post_likes l WHERE l.post_id=p.id AND l.user_id=?) liked_by_me
+     FROM posts p JOIN users u ON u.id=p.user_id WHERE p.id=?`,
+    [req.user.id, postId]
+  );
+  if (!rows.length) return res.status(404).json({ message: 'Post not found' });
+  res.json((await attachMedia(rows))[0]);
+};
+
 exports.create = async (req, res) => {
   const content = String(req.body.content || '').trim();
   const visibility = req.body.visibility === 'CONNECTIONS' ? 'CONNECTIONS' : 'PUBLIC';
@@ -87,6 +106,19 @@ exports.create = async (req, res) => {
     await notify(connection.user_id, 'New post from a connection', `${req.user.name || 'A connection'} published a new post.`, 'POST', r.insertId);
   }
   res.status(201).json({ id: r.insertId, message: 'Post published' });
+};
+
+exports.remove = async (req, res) => {
+  const postId = Number(req.params.id);
+  if (!Number.isSafeInteger(postId) || postId < 1) {
+    return res.status(400).json({ message: 'Invalid post' });
+  }
+  const [result] = await db.execute(
+    'DELETE FROM posts WHERE id=? AND user_id=?',
+    [postId, req.user.id]
+  );
+  if (!result.affectedRows) return res.status(404).json({ message: 'Post not found' });
+  res.json({ message: 'Post deleted' });
 };
 
 exports.toggleLike = async (req, res) => {
@@ -125,3 +157,5 @@ exports.addComment = async (req, res) => {
   if (post[0].user_id !== req.user.id) await notify(post[0].user_id,'New comment','Someone commented on your post.','POST',Number(req.params.id));
   res.status(201).json({ id: r.insertId, message: 'Comment added' });
 };
+
+exports.canViewPost = canViewPost;
