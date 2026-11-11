@@ -34,5 +34,3 @@ DEALLOCATE PREPARE copy_client_fields_statement;
 UPDATE users
 SET client_type='INDIVIDUAL'
 WHERE role='CLIENT' AND (client_type IS NULL OR client_type='');
-
-DROP TABLE IF EXISTS client_profiles;

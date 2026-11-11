@@ -33,6 +33,7 @@ mysql -u root -p < database/migrations/004_client_workspace.sql
 mysql -u root -p < database/migrations/005_client_project_board.sql
 mysql -u root -p < database/migrations/006_chat_profile_post_shares.sql
 mysql -u root -p < database/migrations/007_client_fields_on_users.sql
+mysql -u root -p < database/migrations/008_drop_client_profiles.sql
 cp .env.example .env
 cd server && npm install && npm run seed
 ```
@@ -70,10 +71,18 @@ deployment root directories accordingly.
    `001_initial.sql`, `002_job_application_forward_email.sql`,
    `003_chat_message_hidden_for.sql`, `004_client_workspace.sql`,
    `005_client_project_board.sql`, `006_chat_profile_post_shares.sql`, then
-   `007_client_fields_on_users.sql`. Migration 007 copies client-specific fields
-   into `users` and removes the now-redundant `client_profiles` table.
+   `007_client_fields_on_users.sql`. Migration 004 adds client phone and
+   enquiry fields (including `project_inquiries.category`); the reported
+   missing-column errors indicate it has not been applied to the deployment DB.
+   Migration 007 copies client-specific fields to `users` but intentionally
+   leaves the old table in place during rollout.
+4. Deploy the backend that reads client fields from `users` and verify client
+   registration and profile settings.
+5. Only after that deploy is healthy, apply `008_drop_client_profiles.sql` to
+   remove the legacy table. On a fresh database, run all migrations through
+   008 in order.
    Do not rerun already-applied migrations (in particular, migration `002`
-   adds a column and is not repeatable). The migrations use the
+   and migrations `004` and `007` add columns and are not repeatable). The migrations use the
    `archit_platform` database; set `DB_NAME`
    to `archit_platform` in Render.
 4. Keep the Aiven host, port, user, and newly rotated password in Render only.
