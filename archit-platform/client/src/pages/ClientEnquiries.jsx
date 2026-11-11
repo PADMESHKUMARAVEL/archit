@@ -13,6 +13,7 @@ export default function ClientEnquiries() {
   const [selected, setSelected] = useState(null);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
+  const [acceptingId, setAcceptingId] = useState(null);
   const loadList = async () => {
     setLoading(true);
     try { const {data} = await api.get('/enquiries'); setItems(data); }
@@ -32,6 +33,20 @@ export default function ClientEnquiries() {
       await loadList();
     } catch (requestError) { setError(requestError.response?.data?.message || 'Could not update enquiry'); }
   };
+  const acceptFromList = async (event, item) => {
+    event.preventDefault();
+    event.stopPropagation();
+    setError('');
+    setAcceptingId(item.id);
+    try {
+      await api.patch(`/enquiries/${item.id}/status`, {status:'ACCEPTED'});
+      navigate('/projects');
+    } catch (requestError) {
+      setError(requestError.response?.data?.message || 'Could not accept this enquiry');
+    } finally {
+      setAcceptingId(null);
+    }
+  };
   const cancel = async () => {
     if (!window.confirm('Cancel this enquiry?')) return;
     try { await api.patch(`/enquiries/${id}/cancel`); await loadDetail(); await loadList(); }
@@ -41,10 +56,13 @@ export default function ClientEnquiries() {
   if (!id) return <div className="space-y-5">
     <header><p className="text-sm font-semibold uppercase tracking-[0.18em] text-sage">Project conversations</p><h1 className="mt-1 text-3xl font-semibold">My enquiries</h1><p className="mt-2 text-stone-500">Requirements and responses shared with architects.</p></header>
     {error && <p role="alert" className="rounded-xl bg-red-50 p-3 text-sm text-red-700">{error}</p>}
-    <div className="space-y-3">{items.map(item=><Link key={item.id} to={`/enquiries/${item.id}`} className="card flex flex-wrap items-center gap-4 p-5 hover:border-sage/50">
-      <img src={item.other_party_image || ''} alt="" className="h-12 w-12 rounded-full bg-stone-100 object-cover"/><div className="min-w-0 flex-1"><h2 className="truncate font-semibold">{item.title}</h2><p className="text-sm text-stone-500">{item.other_party_name} · {new Date(item.created_at).toLocaleDateString()}</p></div>
-      <span className="rounded-full bg-sand px-3 py-1 text-xs font-medium">{pretty(item.status)}</span>{item.document_count > 0 && <span className="text-xs text-stone-500">{item.document_count} files</span>}
-    </Link>)}
+    <div className="space-y-3">{items.map(item=><article key={item.id} className="card flex flex-wrap items-center gap-4 p-5 hover:border-sage/50">
+      <Link to={`/enquiries/${item.id}`} className="flex min-w-0 flex-1 flex-wrap items-center gap-4">
+        <img src={item.other_party_image || ''} alt="" className="h-12 w-12 rounded-full bg-stone-100 object-cover"/><div className="min-w-0 flex-1"><h2 className="truncate font-semibold">{item.title}</h2><p className="text-sm text-stone-500">{item.other_party_name} · {new Date(item.created_at).toLocaleDateString()}</p></div>
+        <span className="rounded-full bg-sand px-3 py-1 text-xs font-medium">{pretty(item.status)}</span>{item.document_count > 0 && <span className="text-xs text-stone-500">{item.document_count} files</span>}
+      </Link>
+      {user?.role === 'ARCHITECT' && ['PENDING','VIEWED','RESPONDED','IN_DISCUSSION'].includes(item.status) && <button type="button" className="btn-primary text-sm" disabled={acceptingId === item.id} onClick={event=>acceptFromList(event,item)}>{acceptingId === item.id ? 'Accepting…' : 'Accept and create project'}</button>}
+    </article>)}
       {!items.length && <div className="card p-10 text-center text-stone-500">No enquiries yet. Start by exploring architects.</div>}
     </div>
   </div>;
