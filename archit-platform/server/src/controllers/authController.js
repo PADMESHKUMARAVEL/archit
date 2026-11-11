@@ -46,17 +46,20 @@ exports.register = async (req, res) => {
     }
     const hash = await bcrypt.hash(password, 12);
     const [u] = await conn.execute(
-      'INSERT INTO users (name,email,password_hash,role,location) VALUES (?,?,?,?,?)',
-      [name.trim(), email.trim().toLowerCase(), hash, role, ['CLIENT','ARCHITECT'].includes(role) ? (location?.trim() || null) : null]
+      `INSERT INTO users
+       (name,email,password_hash,role,location,phone,client_type,organization)
+       VALUES (?,?,?,?,?,?,?,?)`,
+      [
+        name.trim(), email.trim().toLowerCase(), hash, role,
+        ['CLIENT','ARCHITECT'].includes(role) ? (location?.trim() || null) : null,
+        role === 'CLIENT' ? phone?.trim() || null : null,
+        role === 'CLIENT' ? client_type || 'INDIVIDUAL' : null,
+        role === 'CLIENT' && client_type !== 'INDIVIDUAL' ? organization?.trim() || null : null
+      ]
     );
     if (role === 'STUDENT') {
       await conn.execute('INSERT INTO student_profiles (user_id) VALUES (?)', [u.insertId]);
-    } else if (role === 'CLIENT') {
-      await conn.execute(
-        'INSERT INTO client_profiles (user_id,organization,client_type,phone) VALUES (?,?,?,?)',
-        [u.insertId, client_type === 'INDIVIDUAL' ? null : organization?.trim() || null, client_type || 'INDIVIDUAL', phone?.trim() || null]
-      );
-    } else {
+    } else if (role === 'ARCHITECT') {
       await conn.execute(
         'INSERT INTO architect_profiles (user_id,firm_name,experience_years,specializations) VALUES (?,?,?,?)',
         [u.insertId, firm_name?.trim() || null, years, JSON.stringify(specialties)]

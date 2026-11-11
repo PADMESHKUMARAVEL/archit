@@ -32,6 +32,7 @@ mysql -u root -p < database/migrations/003_chat_message_hidden_for.sql
 mysql -u root -p < database/migrations/004_client_workspace.sql
 mysql -u root -p < database/migrations/005_client_project_board.sql
 mysql -u root -p < database/migrations/006_chat_profile_post_shares.sql
+mysql -u root -p < database/migrations/007_client_fields_on_users.sql
 cp .env.example .env
 cd server && npm install && npm run seed
 ```
@@ -68,7 +69,9 @@ deployment root directories accordingly.
 3. Apply any migrations not already applied to the Aiven service, in order:
    `001_initial.sql`, `002_job_application_forward_email.sql`,
    `003_chat_message_hidden_for.sql`, `004_client_workspace.sql`,
-   `005_client_project_board.sql`, then `006_chat_profile_post_shares.sql`.
+   `005_client_project_board.sql`, `006_chat_profile_post_shares.sql`, then
+   `007_client_fields_on_users.sql`. Migration 007 copies client-specific fields
+   into `users` and removes the now-redundant `client_profiles` table.
    Do not rerun already-applied migrations (in particular, migration `002`
    adds a column and is not repeatable). The migrations use the
    `archit_platform` database; set `DB_NAME`
@@ -215,7 +218,7 @@ Socket.IO events:
 
 ## Notes
 - Client documents, enquiry attachments, and public-brief references use the
-  configured private S3-compatible object storage. Apply all six database
+  configured private S3-compatible object storage. Apply all seven database
   migrations before using the latest chat and client marketplace functionality.
 - Chat messages are persisted in MySQL; Socket.IO only handles real-time delivery.
 - `POST /api/chat/:conversationId/messages` also accepts `shareType=PROFILE|POST`

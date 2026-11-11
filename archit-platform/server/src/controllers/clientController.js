@@ -19,9 +19,9 @@ const architectSelect = `
 exports.profile = async (req, res) => {
   const [rows] = await db.execute(
     `SELECT u.id,u.name,u.email,u.profile_image,u.bio,u.location,
-      cp.phone,cp.client_type,cp.organization,cp.notification_preferences
-     FROM users u JOIN client_profiles cp ON cp.user_id=u.id
-     WHERE u.id=? AND u.is_active=1`,
+      u.phone,u.client_type,u.organization,u.notification_preferences
+     FROM users u
+     WHERE u.id=? AND u.role='CLIENT' AND u.is_active=1`,
     [req.user.id]
   );
   if (!rows.length) return res.status(404).json({ message: 'Client profile not found' });
@@ -61,9 +61,9 @@ exports.updateProfile = async (req, res) => {
       [name?.trim() || null, bio ?? null, location ?? null, req.user.id]
     );
     await conn.execute(
-      `UPDATE client_profiles SET phone=?,client_type=COALESCE(?,client_type),organization=?,
+      `UPDATE users SET phone=?,client_type=COALESCE(?,client_type),organization=?,
        notification_preferences=COALESCE(?,notification_preferences)
-       WHERE user_id=?`,
+       WHERE id=? AND role='CLIENT'`,
       [phone ?? null, client_type || null, client_type === 'INDIVIDUAL' ? null : organization ?? null,
         notification_preferences === undefined ? null : JSON.stringify(notification_preferences), req.user.id]
     );

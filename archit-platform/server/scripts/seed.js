@@ -40,8 +40,10 @@ async function run() {
       [name,email,passwordHash,role,bio,location]
     );
     ids[email] = r.insertId;
-    const table = role === 'STUDENT' ? 'student_profiles' : role === 'ARCHITECT' ? 'architect_profiles' : 'client_profiles';
-    await db.execute(`INSERT INTO ${table} (user_id) VALUES (?)`,[r.insertId]);
+    if (role === 'STUDENT' || role === 'ARCHITECT') {
+      const table = role === 'STUDENT' ? 'student_profiles' : 'architect_profiles';
+      await db.execute(`INSERT INTO ${table} (user_id) VALUES (?)`,[r.insertId]);
+    }
   }
   await db.execute('UPDATE users SET password_hash=? WHERE email=?', [await bcrypt.hash(demoPassword, 10), demoEmail.toLowerCase()]);
   await db.execute(

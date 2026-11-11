@@ -6,7 +6,7 @@ async function notify(userId, title, message, type, referenceId = null) {
   if (!recipient) throw new Error('Notification recipient not found');
   if (recipient.role === 'CLIENT') {
     const [rows] = await db.execute(
-      'SELECT notification_preferences FROM client_profiles WHERE user_id=?',
+      "SELECT notification_preferences FROM users WHERE id=? AND role='CLIENT'",
       [userId]
     );
     const storedPreferences = rows[0]?.notification_preferences;
