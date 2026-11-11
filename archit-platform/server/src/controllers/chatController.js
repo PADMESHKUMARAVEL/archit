@@ -1,10 +1,6 @@
 const db = require('../config/db');
-const { required } = require('../config/env');
 const notify = require('../utils/notify');
-
-function uploadedUrl(file) {
-  return file ? `${required('BACKEND_URL')}/uploads/${encodeURIComponent(file.filename)}` : null;
-}
+const { upload, signAssetUrls } = require('../utils/objectStorage');
 
 exports.conversations = async (req, res) => {
   const [rows] = await db.execute(
@@ -38,7 +34,7 @@ exports.messages = async (req, res) => {
      WHERE m.conversation_id=? AND m.is_deleted=0 ORDER BY m.created_at DESC LIMIT 100`,
     [req.params.conversationId]
   );
-  res.json(rows.reverse());
+  res.json(await signAssetUrls(rows.reverse()));
 };
 
 exports.send = async (req, res) => {
@@ -52,13 +48,13 @@ exports.send = async (req, res) => {
   if (!member.length) return res.status(403).json({ message: 'Not a conversation participant' });
   const [r] = await db.execute(
     'INSERT INTO messages (conversation_id,sender_id,message,attachment_url) VALUES (?,?,?,?)',
-    [req.params.conversationId,req.user.id,text || null,uploadedUrl(req.file)]
+    [req.params.conversationId,req.user.id,text || null,req.file ? await upload(req.file, 'chat') : null]
   );
   const [rows] = await db.execute(
     `SELECT m.id,m.conversation_id,m.sender_id,m.message,m.attachment_url,m.created_at,u.name sender_name
      FROM messages m JOIN users u ON u.id=m.sender_id WHERE m.id=?`, [r.insertId]
   );
-  const msg = rows[0];
+  const msg = await signAssetUrls(rows[0]);
   if (global.io) global.io.to(`conversation:${req.params.conversationId}`).emit('message:new', msg);
   const [participants] = await db.execute(
     'SELECT user_id FROM conversation_participants WHERE conversation_id=? AND user_id<>?',

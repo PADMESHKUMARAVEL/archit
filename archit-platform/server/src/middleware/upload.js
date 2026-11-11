@@ -1,18 +1,6 @@
-const fs = require('fs');
 const path = require('path');
 const multer = require('multer');
 const { required } = require('../config/env');
-
-const uploadDir = path.resolve(__dirname, '../../', required('UPLOAD_DIR'));
-fs.mkdirSync(uploadDir, { recursive: true });
-
-const storage = multer.diskStorage({
-  destination: uploadDir,
-  filename: (req, file, cb) => {
-    const extension = path.extname(file.originalname).toLowerCase();
-    cb(null, `${Date.now()}-${Math.round(Math.random() * 1e9)}${extension}`);
-  }
-});
 
 const imageExtensions = new Set(['.jpg', '.jpeg', '.png', '.webp', '.gif']);
 const imageMimeTypes = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/gif']);
@@ -26,7 +14,7 @@ const maxBytes = Number(required('MAX_UPLOAD_MB')) * 1024 * 1024;
 
 function createUpload(allowDocuments = false) {
   return multer({
-  storage,
+  storage: multer.memoryStorage(),
   limits: { fileSize: maxBytes },
   fileFilter: (req, file, cb) => {
     const extension = path.extname(file.originalname).toLowerCase();

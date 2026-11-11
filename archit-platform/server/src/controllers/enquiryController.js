@@ -1,5 +1,6 @@
 const db = require('../config/db');
 const notify = require('../utils/notify');
+const { signAssetUrls } = require('../utils/objectStorage');
 
 exports.create = async (req, res) => {
   const architectId = Number(req.params.architectId);
@@ -42,5 +43,5 @@ exports.list = async (req, res) => {
      JOIN users u ON u.id=${isArchitect ? 'i.client_id' : 'i.architect_id'}
      WHERE ${where} ORDER BY i.created_at DESC`, [req.user.id]
   );
-  res.json(rows);
+  res.json(await signAssetUrls(rows));
 };

@@ -2,6 +2,7 @@ const db = require('../config/db');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const { required } = require('../config/env');
+const { signAssetUrls } = require('../utils/objectStorage');
 const JWT_SECRET = required('JWT_SECRET');
 
 exports.register = async (req, res) => {
@@ -50,7 +51,7 @@ exports.login = async (req, res) => {
   const u = rows[0];
   const token = jwt.sign({ id: u.id, role: u.role }, JWT_SECRET, { expiresIn: '12h' });
   delete u.password_hash;
-  res.json({ token, user: u });
+  res.json(await signAssetUrls({ token, user: u }));
 };
 
 exports.me = async (req, res) => {
@@ -59,5 +60,5 @@ exports.me = async (req, res) => {
     [req.user.id]
   );
   if (!rows.length) return res.status(404).json({ message: 'User not found' });
-  res.json(rows[0]);
+  res.json(await signAssetUrls(rows[0]));
 };

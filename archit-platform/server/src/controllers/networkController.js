@@ -1,5 +1,6 @@
 const db = require('../config/db');
 const notify = require('../utils/notify');
+const { signAssetUrls } = require('../utils/objectStorage');
 
 exports.send = async (req, res) => {
   const from = req.user.id, to = Number(req.params.userId);
@@ -39,7 +40,7 @@ exports.sentRequests = async (req, res) => {
      WHERE c.requester_id=? AND c.status='PENDING' ORDER BY c.created_at DESC`,
     [req.user.id]
   );
-  res.json(rows);
+  res.json(await signAssetUrls(rows));
 };
 
 exports.requests = async (req, res) => {
@@ -49,7 +50,7 @@ exports.requests = async (req, res) => {
      WHERE c.receiver_id=? AND c.status='PENDING' ORDER BY c.created_at DESC`,
     [req.user.id]
   );
-  res.json(rows);
+  res.json(await signAssetUrls(rows));
 };
 
 exports.respond = async (req, res) => {
@@ -103,7 +104,7 @@ exports.connections = async (req, res) => {
      ORDER BY u.name`,
     [req.user.id,req.user.id,req.user.id]
   );
-  res.json(rows);
+  res.json(await signAssetUrls(rows));
 };
 
 exports.status = async (req, res) => {

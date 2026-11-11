@@ -1,6 +1,6 @@
 const db = require('../config/db');
 const notify = require('../utils/notify');
-const { required } = require('../config/env');
+const { upload, signAssetUrls } = require('../utils/objectStorage');
 
 let forwardEmailColumn;
 async function hasForwardEmailColumn() {
@@ -22,7 +22,7 @@ exports.list = async (req, res) => {
        AND (j.title LIKE ? OR j.description LIKE ? OR j.location LIKE ?)
      ORDER BY j.created_at DESC LIMIT 50`, [q,q,q]
   );
-  res.json(rows);
+  res.json(await signAssetUrls(rows));
 };
 
 exports.create = async (req, res) => {
@@ -46,7 +46,7 @@ exports.apply = async (req, res) => {
   );
   if (!jobs.length) return res.status(404).json({ message: 'Opportunity is closed or unavailable' });
   if (!req.file) return res.status(400).json({ message: 'Please attach your resume or portfolio file' });
-  const resumeUrl = `${required('BACKEND_URL')}/uploads/${encodeURIComponent(req.file.filename)}`;
+  const resumeUrl = await upload(req.file, 'applications');
   try {
     const [r] = await db.execute(
       'INSERT INTO job_applications (job_id,student_id,resume_url,cover_letter) VALUES (?,?,?,?)',
@@ -66,7 +66,7 @@ exports.mine = async (req, res) => {
      LEFT JOIN job_applications a ON a.job_id=j.id
      WHERE j.architect_id=? GROUP BY j.id ORDER BY j.created_at DESC`, [req.user.id]
   );
-  res.json(rows);
+  res.json(await signAssetUrls(rows));
 };
 
 exports.applications = async (req, res) => {
@@ -79,7 +79,7 @@ exports.applications = async (req, res) => {
      FROM job_applications a JOIN users u ON u.id=a.student_id
      WHERE a.job_id=? ORDER BY a.applied_at DESC`, [req.params.id]
   );
-  res.json(rows);
+  res.json(await signAssetUrls(rows));
 };
 
 exports.updateApplication = async (req, res) => {

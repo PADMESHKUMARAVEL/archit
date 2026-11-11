@@ -4,7 +4,7 @@ import { useAuth } from '../context/AuthContext';
 export default function Profile() {
   const {user} = useAuth(); const [form,setForm] = useState({name:'',bio:'',location:'',profile_image:''}); const [saved,setSaved] = useState(false);
   useEffect(()=>{api.get('/auth/me').then(({data})=>setForm({name:data.name||'',bio:data.bio||'',location:data.location||'',profile_image:data.profile_image||''}));},[]);
-  const submit=async e=>{e.preventDefault();await api.patch('/users/me',form);setSaved(true);};
+  const submit=async e=>{e.preventDefault();await api.patch('/users/me',{name:form.name,bio:form.bio,location:form.location});setSaved(true);};
   const uploadPhoto=async e=>{
     if (!e.target.files?.[0]) return;
     const data=new FormData();

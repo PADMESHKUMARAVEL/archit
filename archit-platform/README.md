@@ -47,6 +47,80 @@ npm run dev
 ```
 Open the Vite URL shown in the terminal (normally http://localhost:5173).
 
+## Deploy (Aiven + Render + Vercel)
+
+This repository keeps the app in the `archit-platform` subdirectory. Configure the
+deployment root directories accordingly.
+
+### Aiven database
+1. Rotate the database password if it has been shared anywhere public or in chat.
+2. In the Aiven console, download the service CA certificate and copy its PEM
+   contents for the Render `DB_SSL_CA` environment variable.
+3. Apply `database/migrations/001_initial.sql` and then
+   `database/migrations/002_job_application_forward_email.sql` to the Aiven
+   service. Both migrations use the `archit_platform` database; set `DB_NAME` to
+   `archit_platform` in Render.
+4. Keep the Aiven host, port, user, and newly rotated password in Render only.
+
+### Render backend
+Create a Web Service from this repository with:
+- Root Directory: `archit-platform/server`
+- Build Command: `npm install`
+- Start Command: `npm start`
+
+Set these Render environment variables (use values from your Aiven and Vercel
+services; never commit them):
+- `FRONTEND_URL`: the deployed Vercel origin, without a trailing slash. You may
+  provide multiple comma-separated origins; local Vite origins are allowed for
+  development automatically.
+- `BACKEND_URL`: the Render service URL
+- `DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASSWORD`: Aiven connection details
+- `DB_NAME`: `archit_platform`
+- `DB_SSL`: `true`
+- `DB_SSL_CA`: contents of the Aiven CA PEM certificate
+- `JWT_SECRET`: a newly generated, long random secret
+- `MAX_UPLOAD_MB`: `5`
+- `STORAGE_ENDPOINT`, `STORAGE_REGION`, `STORAGE_ACCESS_KEY_ID`,
+  `STORAGE_SECRET_ACCESS_KEY`, `STORAGE_BUCKET_NAME`: Supabase Storage S3
+  endpoint, region, access key, secret key, and private bucket name
+- `STORAGE_URL_TTL_SECONDS`: `3600` (signed download URLs expire after one hour)
+
+Render supplies `PORT` automatically. After deployment, verify
+`https://<your-render-service>.onrender.com/api/health` returns `{"status":"ok"}`.
+
+Create a Supabase project and a **private** Storage bucket, then enable S3
+protocol access in the Storage settings. Copy the S3 endpoint, region, and
+access-key credentials from the Supabase S3 configuration page into Render.
+Keep these credentials server-side only; Supabase S3 access keys can access all
+the project's buckets and bypass Storage RLS policies. Uploaded files remain
+private, and the API returns short-lived signed URLs to authenticated app
+responses. A signed URL is a temporary bearer link, so anyone who obtains one
+can access that object until it expires. Do not enable public bucket access or
+put storage credentials in Vercel. Existing files in the server's local
+`uploads` folder are not copied automatically and should be re-uploaded if
+needed.
+
+Supabase's Free plan currently includes 1 GB of file storage and 5 GB of egress.
+Free projects may be paused after a week of inactivity; check current limits and
+billing requirements in the Supabase dashboard before relying on it in
+production.
+
+### Vercel frontend
+Create/import a Vercel project from this repository with:
+- Root Directory: `archit-platform/client`
+- Framework Preset: Vite
+- Build Command: `npm run build`
+- Output Directory: `dist`
+
+Set the following Vercel environment variables for Production (and Preview if
+needed):
+- `VITE_API_URL`: `https://<your-render-service>.onrender.com/api`
+- `VITE_SOCKET_URL`: `https://<your-render-service>.onrender.com`
+
+Redeploy after setting these variables. Then update Render's `FRONTEND_URL` to
+the exact Vercel domain you will use and redeploy the backend. `client/vercel.json`
+provides the SPA fallback so routes work when opened directly.
+
 ## Test accounts
 Run `npm run seed` in the `server` directory after configuring the root `.env` file.
 

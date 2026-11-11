@@ -1,6 +1,6 @@
 const db = require('../config/db');
 const notify = require('../utils/notify');
-const { required } = require('../config/env');
+const { upload, signAssetUrls } = require('../utils/objectStorage');
 
 async function canViewPost(postId, viewerId) {
   const [rows] = await db.execute(
@@ -26,7 +26,7 @@ async function attachMedia(posts) {
     return result;
   }, {});
   posts.forEach(post => { post.media = mediaByPost[post.id] || []; });
-  return posts;
+  return signAssetUrls(posts);
 }
 
 exports.list = async (req, res) => {
@@ -74,7 +74,7 @@ exports.create = async (req, res) => {
   if (content.length > 5000) return res.status(400).json({ message: 'Post is too long (maximum 5000 characters)' });
   const [r] = await db.execute('INSERT INTO posts (user_id,content,visibility) VALUES (?,?,?)', [req.user.id,content,visibility]);
   if (attachment) {
-    const mediaUrl = `${required('BACKEND_URL')}/uploads/${encodeURIComponent(attachment.filename)}`;
+    const mediaUrl = await upload(attachment, 'posts');
     const mediaType = attachment.mimetype.startsWith('image/') ? 'IMAGE' : 'DOCUMENT';
     await db.execute('INSERT INTO post_media (post_id,media_url,media_type) VALUES (?,?,?)', [r.insertId,mediaUrl,mediaType]);
   }
@@ -112,7 +112,7 @@ exports.comments = async (req, res) => {
      WHERE c.post_id=? ORDER BY c.created_at ASC LIMIT 100`,
     [req.params.id]
   );
-  res.json(rows);
+  res.json(await signAssetUrls(rows));
 };
 
 exports.addComment = async (req, res) => {

@@ -1,5 +1,5 @@
 const db = require('../config/db');
-const { required } = require('../config/env');
+const { upload, signAssetUrls } = require('../utils/objectStorage');
 
 exports.search = async (req, res) => {
   const role = ['STUDENT','ARCHITECT','CLIENT'].includes(req.query.role) ? req.query.role : null;
@@ -12,7 +12,7 @@ exports.search = async (req, res) => {
      ORDER BY name LIMIT 50`,
     [role, role, q, q, q]
   );
-  res.json(rows);
+  res.json(await signAssetUrls(rows));
 };
 
 exports.getOne = async (req, res) => {
@@ -27,22 +27,22 @@ exports.getOne = async (req, res) => {
     [req.params.id]
   );
   if (!rows.length) return res.status(404).json({ message: 'Profile not found' });
-  res.json(rows[0]);
+  res.json(await signAssetUrls(rows[0]));
 };
 
 exports.updateMe = async (req, res) => {
-  const { name, bio, location, profile_image } = req.body;
+  const { name, bio, location } = req.body;
   await db.execute(
-    `UPDATE users SET name=COALESCE(?,name), bio=?, location=?, profile_image=?
+    `UPDATE users SET name=COALESCE(?,name), bio=?, location=?
      WHERE id=?`,
-    [name || null, bio ?? null, location ?? null, profile_image ?? null, req.user.id]
+    [name || null, bio ?? null, location ?? null, req.user.id]
   );
   res.json({ message: 'Profile updated' });
 };
 
 exports.updatePhoto = async (req, res) => {
   if (!req.file) return res.status(400).json({ message: 'A photo is required' });
-  const profileImage = `${required('BACKEND_URL')}/uploads/${encodeURIComponent(req.file.filename)}`;
+  const profileImage = await upload(req.file, 'profiles');
   await db.execute('UPDATE users SET profile_image=? WHERE id=?', [profileImage, req.user.id]);
-  res.json({ profile_image: profileImage });
+  res.json(await signAssetUrls({ profile_image: profileImage }));
 };
