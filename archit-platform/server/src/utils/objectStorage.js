@@ -16,6 +16,7 @@ const ASSET_FIELDS = new Set([
 ]);
 
 let client;
+let warnedLegacyLocalAsset = false;
 
 function getClient() {
   if (!client) {
@@ -67,7 +68,11 @@ async function upload(file, folder) {
 async function signUrl(value) {
   if (typeof value !== 'string') return value;
   if (/localhost|127\.0\.0\.1|\/uploads\//i.test(value)) {
-    throw new Error('Legacy local upload reference must be migrated to Supabase Storage');
+    if (!warnedLegacyLocalAsset) {
+      console.warn('A legacy localhost upload reference was found. That asset is unavailable until migrated to Supabase Storage.');
+      warnedLegacyLocalAsset = true;
+    }
+    return null;
   }
   if (!value.startsWith('object://')) return value;
   const key = value.slice('object://'.length);

@@ -91,11 +91,29 @@ exports.create = async (req, res) => {
   const attachment = req.files?.attachment?.[0] || req.files?.photo?.[0];
   if (!content && !attachment) return res.status(400).json({ message: 'Post content or an attachment is required' });
   if (content.length > 5000) return res.status(400).json({ message: 'Post is too long (maximum 5000 characters)' });
-  const [r] = await db.execute('INSERT INTO posts (user_id,content,visibility) VALUES (?,?,?)', [req.user.id,content,visibility]);
-  if (attachment) {
-    const mediaUrl = await upload(attachment, 'posts');
-    const mediaType = attachment.mimetype.startsWith('image/') ? 'IMAGE' : 'DOCUMENT';
-    await db.execute('INSERT INTO post_media (post_id,media_url,media_type) VALUES (?,?,?)', [r.insertId,mediaUrl,mediaType]);
+  const mediaUrl = attachment ? await upload(attachment, 'posts') : null;
+  const conn = await db.getConnection();
+  let postId;
+  try {
+    await conn.beginTransaction();
+    const [post] = await conn.execute(
+      'INSERT INTO posts (user_id,content,visibility) VALUES (?,?,?)',
+      [req.user.id,content,visibility]
+    );
+    postId = post.insertId;
+    if (mediaUrl) {
+      const mediaType = attachment.mimetype.startsWith('image/') ? 'IMAGE' : 'DOCUMENT';
+      await conn.execute(
+        'INSERT INTO post_media (post_id,media_url,media_type) VALUES (?,?,?)',
+        [postId,mediaUrl,mediaType]
+      );
+    }
+    await conn.commit();
+  } catch (error) {
+    await conn.rollback();
+    throw error;
+  } finally {
+    conn.release();
   }
   const [connections] = await db.execute(
     `SELECT CASE WHEN requester_id=? THEN receiver_id ELSE requester_id END user_id
@@ -103,9 +121,13 @@ exports.create = async (req, res) => {
     [req.user.id,req.user.id,req.user.id]
   );
   for (const connection of connections) {
-    await notify(connection.user_id, 'New post from a connection', `${req.user.name || 'A connection'} published a new post.`, 'POST', r.insertId);
+    try {
+      await notify(connection.user_id, 'New post from a connection', 'A connection published a new post.', 'POST', postId);
+    } catch (error) {
+      console.error(`Could not notify connection ${connection.user_id} about post ${postId}:`, error);
+    }
   }
-  res.status(201).json({ id: r.insertId, message: 'Post published' });
+  res.status(201).json({ id: postId, message: 'Post published' });
 };
 
 exports.remove = async (req, res) => {
